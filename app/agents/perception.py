@@ -11,7 +11,7 @@ from app.observability.tracer import log_event
 
 from langsmith import traceable
 
-# ── FILENAME PRIOR ────────────────────────────────────────────────────────────
+#  FILENAME PRIOR 
 # Split filename on both '-' and '_', then look for category keywords.
 # bird-drop_0036.jpg  → tokens: ['bird', 'drop', '0036'] → Bird-drop
 # clean_forced_0000.jpg → tokens: ['clean', 'forced', '0000'] → Clean
@@ -49,7 +49,7 @@ def class_from_filename(image_path):
     return None, 0.0
 
 
-# ── FEATURE EXTRACTION ────────────────────────────────────────────────────────
+#  FEATURE EXTRACTION 
 @traceable(name="extract_features", run_type="tool")
 def extract_features(image_path):
     img = cv2.imread(image_path)
@@ -82,7 +82,7 @@ def extract_features(image_path):
     return features
 
 
-# ── SYSTEM 1: FAST CLASSIFIER ─────────────────────────────────────────────────
+# SYSTEM 1: FAST CLASSIFIER 
 @traceable(name="fast_classifier", run_type="tool")
 def fast_classifier(features):
     white   = features.get("white_ratio", 0)
@@ -104,7 +104,7 @@ def fast_classifier(features):
     return {"class": "Clean",                 "confidence": 0.52}
 
 
-# ── SYSTEM 2: LLM CLASSIFIER ─────────────────────────────────────────────────
+#  SYSTEM 2: LLM CLASSIFIER 
 @traceable(name="llm_classifier", run_type="llm")
 def llm_classifier(features, rag_context, panel_graph_context,
                    panel_history, filename_hint="", filename_class=None):
@@ -191,7 +191,7 @@ Return ONLY valid JSON:
         return {"class": "Unknown", "confidence": 0.0, "reasoning": "parse_error"}
 
 
-# ── META-REASONER ─────────────────────────────────────────────────────────────
+#  META-REASONER 
 @traceable(name="meta_reasoner", run_type="tool")
 def meta_reasoner(fast, slow, panel_history, panel_graph_context,
                   filename_class=None, filename_conf=0.0):
@@ -269,7 +269,7 @@ def meta_reasoner(fast, slow, panel_history, panel_graph_context,
     return result
 
 
-# ── MAIN AGENT ────────────────────────────────────────────────────────────────
+# MAIN AGENT 
 @traceable(name="perception_agent", run_type="chain")
 def perception_agent(image_path, zone="zone_0_0", panel_index=0):
     features = extract_features(image_path)
