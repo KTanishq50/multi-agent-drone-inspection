@@ -88,7 +88,7 @@ def run_mission(req: MissionRequest):
     }
 
 
-# ── Panel-level memory endpoints ──────────────────────────────────────────────
+# Panel-level memory endpoints
 
 @app.get("/panel/{zone}/{panel_index}")
 def get_panel_history(zone: str, panel_index: int):
@@ -117,7 +117,7 @@ def get_uncertain_panels():
     return {"uncertain_panels": get_high_uncertainty_panels()}
 
 
-# ── Zone-level endpoints (backward compat) ────────────────────────────────────
+#  Zone-level endpoints (backward compat) 
 
 @app.get("/memory/{zone}")
 def get_zone_history(zone: str):
