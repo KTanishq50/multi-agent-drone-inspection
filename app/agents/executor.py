@@ -65,7 +65,7 @@ def executor_agent(state):
             logs.append(f"[ERROR] invalid drone_id={drone_id}")
             continue
 
-        # ── Drain swarm inbox ─────────────────────────────────────────────
+        #  Drain swarm inbox 
         msgs = read_swarm_messages(drone_id)
         for msg in msgs:
             all_swarm_msgs.append(msg)
@@ -73,7 +73,7 @@ def executor_agent(state):
             if msg["type"] == "battery_low":
                 logs.append(f"[SWARM] {drone_id} received: {msg['message']}")
 
-        # ── Zone skip check: if zone completed by partner, skip block ─────
+        #  Zone skip check: if zone completed by partner, skip block 
         if zone and zone in completed_zones and zone not in drones[drone_id].zones_done:
             # Find who completed it
             completer = None
@@ -104,7 +104,7 @@ def executor_agent(state):
                     i += 1
                 continue
 
-        # ── MOVE ──────────────────────────────────────────────────────────
+        #  MOVE 
         if action == "move_to":
             if drone.needs_return():
                 logs.append(
@@ -124,7 +124,7 @@ def executor_agent(state):
             logs.append(f"[MOVE] {drone_id} -> {zone} [battery:{drone.battery:.0f}%]")
             swarm_logs.setdefault(drone_id, []).append(f"move {zone}")
 
-        # ── CAPTURE PANEL ─────────────────────────────────────────────────
+        # CAPTURE PANEL 
         elif action == "capture_panel":
             # Emit scanning header once per zone per drone — on first panel
             scan_key = f"{drone_id}_{zone}"
@@ -203,7 +203,7 @@ def executor_agent(state):
 
             swarm_logs.setdefault(drone_id, []).append(f"panel {panel_index} {zone}")
 
-        # ── RETURN TO DOCK ─────────────────────────────────────────────────
+        #  RETURN TO DOCK 
         elif action == "return_to_dock":
             drone.return_to_dock()
             logs.append(f"[DOCK] {drone_id} returned [recharged:100%]")
