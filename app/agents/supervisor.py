@@ -31,7 +31,7 @@ def supervisor_agent(state):
 
     log_event("supervisor", "iteration", iteration)
 
-    # ── First entry: start mission ─────────────────────────────────────────
+    #  First entry: start mission 
     if report is None and iteration == 0:
         log_event("supervisor", "decision", "plan — mission start")
         return {
@@ -40,7 +40,7 @@ def supervisor_agent(state):
             "supervisor_notes":    "Initial mission assignment. Drones start at dock with full battery."
         }
 
-    # ── After first execution: check for incomplete zones ─────────────────
+    #  After first execution: check for incomplete zones 
     if report is None and iteration > 0:
         # Check if any zone was abandoned due to battery
         battery_critical = [
@@ -76,7 +76,7 @@ def supervisor_agent(state):
             "supervisor_notes":    "Continuing mission."
         }
 
-    # ── After report: evaluate and decide ─────────────────────────────────
+    #  After report: evaluate and decide 
     if report is not None:
         # Check panels that had low confidence — flag for re-inspection
         low_conf_panels = []
