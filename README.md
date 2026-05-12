@@ -586,16 +586,6 @@ The current implementation simulates drone operations in a controlled environmen
 
 ---
 
-# Author
-
-Add your name and links here.
-
-Suggested additions:
-
-* LinkedIn
-* GitHub
-* Portfolio
-* Resume
 
 ---
 
