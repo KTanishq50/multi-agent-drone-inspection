@@ -19,7 +19,7 @@ DOCS_DIR = "docs"
 CHROMA_DIR = "chroma_db"
 
 
-# ── SOLAR EMBEDDING FUNCTION ─────────────────────────────────────────────────
+#  SOLAR EMBEDDING FUNCTION 
 #
 # Replaces: HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 #
@@ -63,11 +63,11 @@ class SolarEmbeddingFunction(EmbeddingFunction):
     def __init__(self):
         self._clean = re.compile(r"[^a-z0-9\s]")
 
-    # ── Chroma native interface ──
+    #  Chroma native interface 
     def __call__(self, input: Documents) -> Embeddings:
         return [self._encode(doc) for doc in input]
 
-    # ── LangChain interface (what langchain_community.Chroma needs) ──
+    # LangChain interface (what langchain_community.Chroma needs) 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         return [self._encode(t) for t in texts]
 
@@ -91,9 +91,9 @@ class SolarEmbeddingFunction(EmbeddingFunction):
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 
-# ── INGEST ────────────────────────────────────────────────────────────────────
 
-# ── INGEST ────────────────────────────────────────────────────────────────────
+
+# INGEST 
 
 def ingest_documents():
     if not os.path.exists(DOCS_DIR):
