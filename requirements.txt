@@ -18,12 +18,10 @@ langsmith==0.1.77
 
 
 
-# Vector store — Chroma (kept exactly as v1)
+# Vector store — Chroma 
 chromadb==0.5.0
 
-# NOTE: sentence-transformers is removed.
-# Embedding is handled by SolarEmbeddingFunction in app/rag/ingest.py
-# which implements chromadb.EmbeddingFunction directly — no model download.
+
 
 # Graph
 networkx==3.3
