@@ -18,6 +18,17 @@ The system was designed as an end-to-end agentic architecture rather than a sing
 
 ---
 
+# Demo Video
+
+
+https://github.com/user-attachments/assets/4994c454-cf9e-4701-8b51-20c5c38db8aa
+
+
+
+---
+
+---
+
 # Screenshots
 
 > Add screenshots/gifs here
