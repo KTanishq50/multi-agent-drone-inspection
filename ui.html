@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Drone Inspection</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #111; color: #ddd;
+  font-family: monospace; font-size: 13px;
+  display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+}
+#topbar {
+  background: #1a1a1a; border-bottom: 1px solid #333;
+  padding: 8px 16px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+#topbar h1 { font-size: 13px; color: #58a6ff; letter-spacing: 2px; white-space: nowrap; }
+#cmd-input {
+  flex: 1; background: #0d1117; border: 1px solid #333; color: #ddd;
+  font-family: monospace; font-size: 13px; padding: 6px 10px; outline: none;
+}
+#cmd-input:focus { border-color: #58a6ff; }
+#cmd-input::placeholder { color: #444; }
+#run-btn {
+  background: #238636; border: 1px solid #2ea043; color: #fff;
+  font-family: monospace; font-size: 12px; padding: 6px 18px;
+  cursor: pointer; letter-spacing: 1px; white-space: nowrap;
+}
+#run-btn:hover { background: #2ea043; }
+#run-btn:disabled { background: #1c2128; border-color: #333; color: #555; cursor: not-allowed; }
+#status-text { font-size: 11px; color: #6e7681; white-space: nowrap; }
+
+#drone-bar {
+  background: #161b22; border-bottom: 1px solid #2a2a2a;
+  padding: 5px 16px; display: flex; align-items: center; gap: 24px; flex-shrink: 0;
+}
+.dpill { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.dpill .dn { color: #58a6ff; font-weight: bold; }
+.dpill .dl { color: #555; min-width: 70px; }
+.dpill .db { font-size: 10px; padding: 1px 6px; border: 1px solid #333; color: #444; letter-spacing: 1px; }
+.dpill .db.moving    { border-color: #388bfd; color: #79c0ff; }
+.dpill .db.scanning  { border-color: #e3b341; color: #e3b341; animation: blink .6s ease-in-out infinite; }
+.dpill .db.returning { border-color: #3fb950; color: #3fb950; }
+.bat-wrap { width: 48px; height: 8px; background: #21262d; border: 1px solid #333; }
+.bat-fill { height: 100%; transition: width 0.5s ease; }
+.bat-fill.high   { background: #3fb950; }
+.bat-fill.medium { background: #e3b341; }
+.bat-fill.low    { background: #f85149; }
+.bat-pct { font-size: 9px; color: #555; margin-left: 4px; min-width: 28px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+#legend {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-size: 10px; color: #555; margin-left: auto;
+}
+.leg { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 8px; height: 8px; border-radius: 1px; flex-shrink: 0; }
+
+#main { flex: 1; display: flex; overflow: hidden; }
+
+#farm-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 10px; background: #111; overflow: auto;
+}
+#farm-outer { border: 2px solid #444; background: #161b22; padding: 8px; display: inline-block; }
+#farm {
+  display: grid;
+  grid-template-columns: repeat(8, 72px);
+  grid-template-rows: repeat(8, 64px);
+  gap: 5px;
+}
+.zone {
+  width: 72px; height: 64px;
+  background: #0d1117; border: 1px solid #21262d;
+  display: flex; flex-direction: column; padding: 3px; gap: 2px;
+  position: relative; cursor: pointer; transition: border-color 0.2s;
+}
+.zone:hover { border-color: #58a6ff; }
+.zone.scanning { border-color: #58a6ff; animation: zonepulse .8s ease-in-out infinite; }
+@keyframes zonepulse { 0%,100%{border-color:#58a6ff} 50%{border-color:#1a3a6a} }
+.zone-lbl { font-size: 7px; color: #3a3a3a; text-align: center; line-height: 1; flex-shrink: 0; }
+.panels { flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+.panel {
+  background: #1c2128; border: 1px solid #21262d; border-radius: 1px;
+  transition: background 0.4s ease, border-color 0.4s ease;
+}
+.panel.clean      { background: #0f2d1a; border-color: #238636; }
+.panel.bird-drop  { background: #2a1e00; border-color: #9e6a03; }
+.panel.dusty      { background: #2d2200; border-color: #bb8009; }
+.panel.electrical { background: #1d0f2d; border-color: #8957e5; }
+.panel.physical   { background: #2d0f0f; border-color: #da3633; }
+.panel.snow       { background: #0f1d2d; border-color: #388bfd; }
+.panel.scanning   { background: #0d2030; border-color: #58a6ff; animation: blink .4s ease-in-out infinite; }
+.d1-dot, .d2-dot {
+  position: absolute; width: 9px; height: 9px; border-radius: 50%;
+  top: 2px; animation: blink .6s ease-in-out infinite; z-index: 10;
+}
+.d1-dot { right: 11px; background: #58a6ff; box-shadow: 0 0 7px #58a6ff; }
+.d2-dot { right: 1px;  background: #3fb950; box-shadow: 0 0 7px #3fb950; }
+
+#right {
+  width: 340px; border-left: 1px solid #2a2a2a;
+  display: flex; flex-direction: column; background: #0d1117; overflow: hidden; flex-shrink: 0;
+}
+#tabs { display: flex; border-bottom: 1px solid #2a2a2a; background: #161b22; flex-shrink: 0; }
+.tab {
+  flex: 1; padding: 7px 2px; font-family: monospace; font-size: 10px; letter-spacing: 0.5px;
+  background: none; border: none; border-bottom: 2px solid transparent; color: #555; cursor: pointer;
+}
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.pane { display: none; flex: 1; overflow-y: auto; flex-direction: column; }
+.pane.active { display: flex; }
+.pane::-webkit-scrollbar { width: 3px; }
+.pane::-webkit-scrollbar-thumb { background: #333; }
+
+/* Log lines */
+.ll { padding: 4px 12px; font-size: 11px; border-bottom: 1px solid #161b22; line-height: 1.4; animation: fi .15s ease; }
+@keyframes fi { from{opacity:0;transform:translateX(4px)} to{opacity:1} }
+.ll.move      { color: #79c0ff; }
+.ll.scan      { color: #e3b341; font-weight: bold; }
+.ll.panel     { color: #8b949e; font-size: 10px; padding-left: 20px; border-color: transparent; }
+.ll.zonedone  { color: #3fb950; }
+.ll.dock      { color: #555; }
+.ll.warn      { color: #e3b341; }
+.ll.err       { color: #f85149; }
+.ll.swarm     { color: #d2a8ff; font-style: italic; }
+.ll.batt      { color: #f85149; }
+.ll.super     { color: #58a6ff; font-size: 10px; border-left: 2px solid #1a3a5a; padding-left: 10px; }
+.ll.sys       { color: #3a3a3a; font-size: 10px; border-color: transparent; }
+.ll.fok       { color: #3fb950; font-weight: bold; }
+.ll.ferr      { color: #f85149; font-weight: bold; }
+
+/* Status banner */
+.sbanner { padding: 7px 12px; font-size: 11px; font-weight: bold; letter-spacing: 1px; border-left: 3px solid; flex-shrink: 0; }
+.sbanner.approved  { background: #0f2d1a; color: #3fb950; border-color: #3fb950; }
+.sbanner.escalated { background: #2d1f00; color: #e3b341; border-color: #e3b341; }
+.sbanner.aborted   { background: #2d0f0f; color: #f85149; border-color: #f85149; }
+.mstats { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid #2a2a2a; flex-shrink: 0; }
+.ms { padding: 7px 10px; border-right: 1px solid #2a2a2a; }
+.ms:last-child { border: none; }
+.ms-l { font-size: 9px; color: #555; letter-spacing: 1px; text-transform: uppercase; }
+.ms-v { font-size: 19px; font-weight: bold; margin-top: 1px; }
+.ms-v.g{color:#3fb950} .ms-v.y{color:#e3b341} .ms-v.r{color:#f85149} .ms-v.b{color:#58a6ff}
+
+/* Zone group — no class badge */
+.zgroup { flex-shrink: 0; margin-bottom: 4px; }
+.zgroup-hdr {
+  margin: 10px 10px 0;
+  padding: 5px 10px;
+  background: #161b22;
+  border: 1px solid #2a2a2a;
+  border-bottom: none;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.zgroup-name { font-size: 12px; color: #58a6ff; font-weight: bold; letter-spacing: 1px; }
+.zgroup-sub  { font-size: 10px; color: #444; }
+
+/* Panel row */
+.prow {
+  margin: 0 10px;
+  padding: 5px 10px;
+  background: #0d1117;
+  border: 1px solid #21262d;
+  border-top: none;
+  display: grid;
+  grid-template-columns: 28px 1fr 64px 40px 28px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.prow:last-of-type { border-bottom: 1px solid #2a2a2a; margin-bottom: 2px; }
+
+.pidx {
+  font-size: 10px; font-weight: bold; text-align: center;
+  padding: 2px 0; border-radius: 2px; letter-spacing: 0.5px;
+}
+.pidx.clean      { background: #0f2d1a; color: #3fb950; border: 1px solid #238636; }
+.pidx.bird-drop  { background: #2a1e00; color: #e3b341; border: 1px solid #9e6a03; }
+.pidx.dusty      { background: #2d2200; color: #e3b341; border: 1px solid #bb8009; }
+.pidx.electrical { background: #1d0f2d; color: #d2a8ff; border: 1px solid #8957e5; }
+.pidx.physical   { background: #2d0f0f; color: #f85149; border: 1px solid #da3633; }
+.pidx.snow       { background: #0f1d2d; color: #79c0ff; border: 1px solid #388bfd; }
+.pidx.unk        { background: #1c2128; color: #555;    border: 1px solid #333; }
+
+.pclass { font-size: 11px; color: #c9d1d9; }
+.pconf-wrap { display: flex; align-items: center; gap: 4px; }
+.pconf-bar  { flex: 1; height: 3px; background: #21262d; }
+.pconf-fill { height: 100%; transition: width 0.8s; }
+.pconf-pct  { font-size: 9px; color: #555; min-width: 26px; text-align: right; }
+.pmeta { font-size: 9px; color: #3a3a3a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pthumb { width: 28px; height: 20px; object-fit: cover; border: 1px solid #21262d; display: block; }
+
+/* Swarm messages */
+.smsg { margin: 5px 10px; padding: 7px 10px; border: 1px solid; border-left-width: 3px; font-size: 11px; line-height: 1.5; flex-shrink: 0; animation: fi .2s ease; }
+.smsg .sm-head { font-size: 10px; margin-bottom: 3px; letter-spacing: 1px; font-weight: bold; }
+.smsg.done     { background: #0f1f0f; border-color: #3fb950; color: #3fb950; }
+.smsg.done .sm-head { color: #3fb950; }
+.smsg.skip     { background: #1a1500; border-color: #e3b341; color: #c9b060; }
+.smsg.skip .sm-head { color: #e3b341; }
+.smsg.battery  { background: #1a0f0f; border-color: #f85149; color: #c96060; }
+.smsg.battery .sm-head { color: #f85149; }
+.smsg.info     { background: #0d1a2a; border-color: #388bfd; color: #79c0ff; }
+.smsg.info .sm-head { color: #388bfd; }
+
+/* Supervisor messages panel */
+.super-msg {
+  margin: 5px 10px; padding: 8px 10px;
+  background: #0d1520; border: 1px solid #1a3a5a; border-left: 3px solid #58a6ff;
+  font-size: 11px; color: #79c0ff; line-height: 1.5; flex-shrink: 0;
+  animation: fi .2s ease;
+}
+.super-msg .sm-head { font-size: 10px; color: #58a6ff; margin-bottom: 3px; letter-spacing: 1px; }
+
+.rtext { padding: 12px; font-size: 11px; color: #8b949e; line-height: 1.8; white-space: pre-wrap; }
+.rtext strong { color: #c9d1d9; }
+.empty { padding: 24px 12px; text-align: center; color: #3a3a3a; font-size: 11px; line-height: 2; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>Drone Inspection</h1>
+  <input id="cmd-input" type="text"
+    placeholder="Inspect zone_0_0 zone_1_1 zone_3_4 zone_5_5"
+    value="Inspect zone_0_0 zone_1_1 zone_3_4 zone_5_5" />
+  <button id="run-btn" onclick="runMission()">Execute</button>
+  <span id="status-text">STANDBY</span>
+</div>
+
+<div id="drone-bar">
+  <div class="dpill">
+    <span class="dn">D1</span>
+    <span class="dl" id="d1-loc">dock</span>
+    <span class="db" id="d1-badge">DOCKED</span>
+    <div class="bat-wrap"><div class="bat-fill high" id="d1-bat" style="width:100%"></div></div>
+    <span class="bat-pct" id="d1-bat-pct">100%</span>
+  </div>
+  <div class="dpill">
+    <span class="dn">D2</span>
+    <span class="dl" id="d2-loc">dock</span>
+    <span class="db" id="d2-badge">DOCKED</span>
+    <div class="bat-wrap"><div class="bat-fill high" id="d2-bat" style="width:100%"></div></div>
+    <span class="bat-pct" id="d2-bat-pct">100%</span>
+  </div>
+  <div id="legend">
+    <div class="leg"><div class="leg-dot" style="background:#238636"></div>Clean</div>
+    <div class="leg"><div class="leg-dot" style="background:#9e6a03"></div>Bird-Drop</div>
+    <div class="leg"><div class="leg-dot" style="background:#bb8009"></div>Dusty</div>
+    <div class="leg"><div class="leg-dot" style="background:#8957e5"></div>Electrical</div>
+    <div class="leg"><div class="leg-dot" style="background:#da3633"></div>Physical</div>
+    <div class="leg"><div class="leg-dot" style="background:#388bfd"></div>Snow</div>
+    <div class="leg">
+      <div class="leg-dot" style="background:#58a6ff;border-radius:50%"></div>D1
+      <div class="leg-dot" style="background:#3fb950;border-radius:50%;margin-left:4px"></div>D2
+    </div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="farm-wrap">
+    <div id="farm-outer"><div id="farm"></div></div>
+  </div>
+  <div id="right">
+    <div id="tabs">
+      <button class="tab active" onclick="switchTab('log')">Log</button>
+      <button class="tab" onclick="switchTab('swarm')">Swarm</button>
+      <button class="tab" onclick="switchTab('analysis')">Analysis</button>
+      <button class="tab" onclick="switchTab('report')">Report</button>
+    </div>
+
+    <div class="pane active" id="pane-log">
+      <div class="empty" id="log-empty">Awaiting mission...</div>
+      <div id="log-list"></div>
+    </div>
+
+    <div class="pane" id="pane-swarm">
+      <div class="empty" id="swarm-empty">No communications yet.</div>
+      <div id="swarm-list"></div>
+    </div>
+
+    <div class="pane" id="pane-analysis">
+      <div id="a-banner"></div><div id="a-stats"></div>
+      <div class="empty" id="a-empty">No analysis yet.</div>
+      <div id="a-list"></div>
+    </div>
+
+    <div class="pane" id="pane-report">
+      <div class="empty" id="r-empty">No report yet.</div>
+      <div id="r-body"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var ROWS=8, COLS=8, PANELS=5;
+var droneZone = {drone_1:null, drone_2:null};
+var zonePanels = {};
+
+function buildFarm(){
+  var farm = document.getElementById('farm');
+  farm.innerHTML = '';
+  for(var i=0;i<ROWS;i++){
+    for(var j=0;j<COLS;j++){
+      var zid = 'zone_'+i+'_'+j;
+      var z = document.createElement('div');
+      z.className = 'zone'; z.id = 'zone-'+zid;
+      z.onclick = (function(id){return function(){onZoneClick(id);};})(zid);
+      var lbl = document.createElement('div');
+      lbl.className = 'zone-lbl'; lbl.textContent = i+','+j;
+      z.appendChild(lbl);
+      var panels = document.createElement('div');
+      panels.className = 'panels';
+      for(var p=0;p<PANELS;p++){
+        var panel = document.createElement('div');
+        panel.className = 'panel'; panel.id = 'panel-'+zid+'-'+p;
+        panels.appendChild(panel);
+      }
+      z.appendChild(panels);
+      farm.appendChild(z);
+    }
+  }
+}
+
+function classKey(cls){
+  var c = (cls||'').toLowerCase();
+  if(c.includes('clean'))    return 'clean';
+  if(c.includes('bird'))     return 'bird-drop';
+  if(c.includes('dust'))     return 'dusty';
+  if(c.includes('electric')) return 'electrical';
+  if(c.includes('physical')||c.includes('damage')) return 'physical';
+  if(c.includes('snow'))     return 'snow';
+  return 'unk';
+}
+function confColor(c){ return c>0.7?'#3fb950':c>0.5?'#e3b341':'#f85149'; }
+
+function setPanelClass(zid,pIdx,cls){
+  var key = classKey(cls);
+  var p = document.getElementById('panel-'+zid+'-'+pIdx);
+  if(p) p.className = 'panel '+(key==='unk'?'':key);
+  if(!zonePanels[zid]) zonePanels[zid] = {};
+  zonePanels[zid][pIdx] = cls;
+}
+function setPanelScanning(zid,pIdx){
+  var p = document.getElementById('panel-'+zid+'-'+pIdx);
+  if(p) p.className = 'panel scanning';
+}
+function setZoneScanning(zid){
+  var z = document.getElementById('zone-'+zid);
+  if(z) z.classList.add('scanning');
+  for(var p=0;p<PANELS;p++) setPanelScanning(zid,p);
+}
+function clearZone(zid){
+  var z = document.getElementById('zone-'+zid);
+  if(z) z.classList.remove('scanning');
+  for(var p=0;p<PANELS;p++){
+    var el = document.getElementById('panel-'+zid+'-'+p);
+    if(el) el.className = 'panel';
+  }
+}
+function removeDot(did){
+  document.querySelectorAll('.'+(did==='drone_1'?'d1-dot':'d2-dot'))
+    .forEach(function(e){e.remove();});
+}
+function placeDot(did,zid){
+  removeDot(did);
+  if(!zid) return;
+  var z = document.getElementById('zone-'+zid);
+  if(!z) return;
+  var dot = document.createElement('div');
+  dot.className = did==='drone_1'?'d1-dot':'d2-dot';
+  z.appendChild(dot);
+}
+function setBattery(did,pct){
+  var n = did==='drone_1'?'1':'2';
+  var fill = document.getElementById('d'+n+'-bat');
+  var txt  = document.getElementById('d'+n+'-bat-pct');
+  if(!fill||!txt) return;
+  fill.style.width = Math.max(0,pct)+'%';
+  fill.className = 'bat-fill '+(pct>50?'high':pct>25?'medium':'low');
+  txt.textContent = Math.round(pct)+'%';
+  txt.style.color = pct>50?'#555':pct>25?'#e3b341':'#f85149';
+}
+function setDroneUI(did,loc,bc,bt){
+  var n = did==='drone_1'?'1':'2';
+  document.getElementById('d'+n+'-loc').textContent = loc;
+  var b = document.getElementById('d'+n+'-badge');
+  b.className = 'db'+(bc?' '+bc:''); b.textContent = bt;
+}
+function addLog(text,cls){
+  document.getElementById('log-empty').style.display = 'none';
+  var el = document.createElement('div');
+  el.className = 'll '+(cls||'sys'); el.textContent = text;
+  var list = document.getElementById('log-list');
+  list.appendChild(el); list.scrollTop = list.scrollHeight;
+}
+function addComm(type, from, to, message, zone){
+  document.getElementById('swarm-empty').style.display = 'none';
+  var typeCls   = type==='zone_done'?'done':type==='skip_zone'?'skip':type==='battery_low'?'battery':'info';
+  var typeLabel = type==='zone_done'?'ZONE DONE':type==='skip_zone'?'SKIP ZONE':
+                  type==='battery_low'?'BATTERY LOW':type==='supervisor'?'SUPERVISOR':'MSG';
+  var el = document.createElement('div');
+  el.className = 'smsg '+typeCls;
+  el.innerHTML =
+    '<div class="sm-head">'+typeLabel+
+    (from?' \u00b7 '+from:'')+
+    (to?' \u2192 '+to:'')+
+    '</div>'+
+    '<div>'+(message||'')+'</div>'+
+    (zone?'<div style="font-size:9px;color:#555;margin-top:2px">zone: '+zone+'</div>':'');
+  var list = document.getElementById('swarm-list');
+  list.appendChild(el); list.scrollTop = list.scrollHeight;
+}
+
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+// ── ANIMATE ───────────────────────────────────────────────────────────────────
+async function animate(execLog, analysisResults, swarmMessages, supervisorNotes){
+  // Show supervisor notes first in swarm tab
+  if(supervisorNotes){
+    document.getElementById('swarm-empty').style.display = 'none';
+    var el = document.createElement('div');
+    el.className = 'super-msg';
+    el.innerHTML = '<div class="sm-head">SUPERVISOR</div><div>'+supervisorNotes+'</div>';
+    document.getElementById('swarm-list').appendChild(el);
+  }
+
+  // Render all swarm messages
+  for(var sm of (swarmMessages||[])) {
+    addComm(sm.type, sm.from, sm.to, sm.message, sm.zone);
+  }
+
+  for(var i=0;i<execLog.length;i++){
+    var line = execLog[i];
+
+    // [MOVE] drone_1 -> zone_0_0 [battery:92%]
+    var moveM = line.match(/^\[MOVE\] (drone_\d+) -> (zone_\d+_\d+) \[battery:([\d.]+)%\]/);
+    if(moveM){
+      var did=moveM[1], zid=moveM[2], bat=parseFloat(moveM[3]);
+      addLog('\u2192 '+did+' moving to '+zid+' [bat:'+Math.round(bat)+'%]','move');
+      placeDot(did,zid); setZoneScanning(zid);
+      setDroneUI(did,zid,'moving','MOVING');
+      droneZone[did]=zid; setBattery(did,bat);
+      await sleep(480); continue;
+    }
+
+    // [SCAN_START] drone_1 zone=zone_0_0
+    var scanM = line.match(/^\[SCAN_START\] (drone_\d+) zone=(zone_\d+_\d+)/);
+    if(scanM){
+      var did2=scanM[1], zid2=scanM[2];
+      setDroneUI(did2,zid2,'scanning','SCANNING');
+      addLog('[ '+did2+' ] scanning '+zid2+' panels:','scan');
+      await sleep(100); continue;
+    }
+
+    // [PANEL] drone_1 zone=zone_0_0 panel=0 class=Bird-drop confidence=0.88
+    var panelM = line.match(/^\[PANEL\] (drone_\d+) zone=(zone_\d+_\d+) panel=(\d+) class=(\S+) confidence=([\d.]+)/);
+    if(panelM){
+      var did3=panelM[1], zid3=panelM[2], pIdx=parseInt(panelM[3]),
+          pcls=panelM[4], pconf=parseFloat(panelM[5]);
+      setPanelClass(zid3, pIdx, pcls);
+      addLog('  P'+pIdx+' \u2192 '+pcls+' ('+Math.round(pconf*100)+'%)','panel');
+      await sleep(140); continue;
+    }
+
+    // [ZONE_DONE] drone_1 zone=zone_0_0
+    var zdoneM = line.match(/^\[ZONE_DONE\] (drone_\d+) zone=(zone_\d+_\d+)/);
+    if(zdoneM){
+      var did4=zdoneM[1], zid4=zdoneM[2];
+      var z=document.getElementById('zone-'+zid4);
+      if(z) z.classList.remove('scanning');
+      addLog('  '+zid4+' \u2714 complete','zonedone');
+      await sleep(120); continue;
+    }
+
+    // [DOCK] drone_1 returned
+    var dockM = line.match(/^\[DOCK\] (drone_\d+)/);
+    if(dockM){
+      var did5=dockM[1];
+      addLog(did5+' \u2192 dock [recharged]','dock');
+      removeDot(did5); setDroneUI(did5,'dock','returning','RETURNING');
+      droneZone[did5]=null; setBattery(did5,100);
+      await sleep(260); setDroneUI(did5,'dock','','DOCKED'); continue;
+    }
+
+    // [SWARM] skip
+    var skipM = line.match(/^\[SWARM\] (drone_\d+) skipping (zone_\d+_\d+)/);
+    if(skipM){
+      addLog('[SWARM] '+skipM[1]+' skipping '+skipM[2]+' \u2014 partner done','swarm');
+      await sleep(80); continue;
+    }
+
+    // [SWARM] received
+    var swarmM = line.match(/^\[SWARM\] (drone_\d+) received: (.+)/);
+    if(swarmM){ addLog('[SWARM] '+swarmM[2],'swarm'); await sleep(60); continue; }
+
+    // [BATTERY CRITICAL]
+    var battM = line.match(/^\[BATTERY CRITICAL\] (drone_\d+) battery ([\d.]+)%/);
+    if(battM){
+      setBattery(battM[1], parseFloat(battM[2]));
+      addLog('[!] '+battM[1]+' battery critical \u2014 forced return','batt');
+      await sleep(100); continue;
+    }
+
+    // [LOW CONFIDENCE]
+    if(line.match(/^\[LOW CONFIDENCE\]/)){
+      addLog(line.replace('[LOW CONFIDENCE]','! low conf'),'warn');
+      await sleep(80); continue;
+    }
+  }
+}
+
+// ── ANALYSIS RENDER ───────────────────────────────────────────────────────────
+function renderAnalysis(data){
+  document.getElementById('a-empty').style.display = 'none';
+  var status = data.safety_status||'';
+  var score  = data.mission_score||0;
+  var panels = data.analysis||[];
+
+  var btxt = status==='aborted'   ? 'ABORTED \u2014 critical damage threshold exceeded'
+           : status==='escalated' ? 'ESCALATED \u2014 human review required'
+           :                        'APPROVED \u2014 mission complete';
+  document.getElementById('a-banner').innerHTML =
+    '<div class="sbanner '+(status||'approved')+'">'+btxt+'</div>';
+
+  var sc = score>=0.7?'g':score>=0.4?'y':'r';
+  document.getElementById('a-stats').innerHTML =
+    '<div class="mstats">'+
+    '<div class="ms"><div class="ms-l">Score</div><div class="ms-v '+sc+'">'+Math.round(score*100)+'%</div></div>'+
+    '<div class="ms"><div class="ms-l">Panels</div><div class="ms-v b">'+panels.length+'</div></div>'+
+    '<div class="ms"><div class="ms-l">Iters</div><div class="ms-v">'+(data.iterations||1)+'</div></div>'+
+    '</div>';
+
+  var list = document.getElementById('a-list');
+  list.innerHTML = '';
+
+  // Group by zone preserving order
+  var byZone = {}, zoneOrder = [];
+  panels.forEach(function(a){
+    if(!byZone[a.zone]){ byZone[a.zone]=[]; zoneOrder.push(a.zone); }
+    byZone[a.zone].push(a);
+  });
+
+  zoneOrder.forEach(function(zone){
+    var zonePanelList = byZone[zone].sort(function(a,b){return a.panel_index-b.panel_index;});
+    var drone = zonePanelList[0].drone;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'zgroup'; wrap.id = 'zgroup-'+zone;
+
+    // Zone header — NO class badge
+    var hdr = document.createElement('div');
+    hdr.className = 'zgroup-hdr';
+    hdr.innerHTML =
+      '<span class="zgroup-name">'+zone+'</span>'+
+      '<span class="zgroup-sub">'+drone+' \u00b7 '+zonePanelList.length+' panels</span>';
+    wrap.appendChild(hdr);
+
+    // Panel rows P0..P4
+    zonePanelList.forEach(function(a){
+      var r    = a.analysis||{};
+      var key  = classKey(r.class);
+      var conf = r.confidence||0;
+      var cc   = confColor(conf);
+      var meta = (r.meta_note||'')
+        .replace('filename + system agreed','✓ label+sys')
+        .replace('filename override','⚡ override')
+        .replace('both systems agreed','✓ both')
+        .replace('confidence tiebreak','~ tiebreak')
+        .replace('damage corridor — deferred to slow','⚠ corridor')
+        .replace('slow + panel_graph agree','≈ graph')
+        .replace('risky class — deferred to slow','⚠ risky');
+
+      var row = document.createElement('div');
+      row.className = 'prow'; row.id = 'prow-'+a.panel_id;
+      row.innerHTML =
+        '<div class="pidx '+key+'">P'+a.panel_index+'</div>'+
+        '<div class="pclass">'+(r.class||'Unknown')+'</div>'+
+        '<div class="pconf-wrap">'+
+          '<div class="pconf-bar">'+
+            '<div class="pconf-fill" style="width:'+(conf*100)+'%;background:'+cc+'"></div>'+
+          '</div>'+
+          '<span class="pconf-pct">'+Math.round(conf*100)+'%</span>'+
+        '</div>'+
+        '<div class="pmeta" title="'+(r.meta_note||'')+'">'+meta+'</div>'+
+        '<img class="pthumb" src="/grid-image/'+zone+'/'+a.panel_index+'" '+
+             'onerror="this.style.display=\'none\'">';
+      wrap.appendChild(row);
+    });
+
+    list.appendChild(wrap);
+  });
+}
+
+function renderReport(data){
+  document.getElementById('r-empty').style.display = 'none';
+  var html = (data.report||'No report.')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  document.getElementById('r-body').innerHTML = '<div class="rtext">'+html+'</div>';
+}
+
+function onZoneClick(zid){
+  if(!zonePanels[zid]) return;
+  switchTab('analysis');
+  setTimeout(function(){
+    var g = document.getElementById('zgroup-'+zid);
+    if(g){
+      g.scrollIntoView({behavior:'smooth',block:'start'});
+      g.style.outline = '1px solid #58a6ff';
+      setTimeout(function(){g.style.outline='';},1500);
+    }
+  },80);
+}
+
+function switchTab(name){
+  var names = ['log','swarm','analysis','report'];
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.pane').forEach(function(p){p.classList.remove('active');});
+  document.getElementById('pane-'+name).classList.add('active');
+}
+
+function resetUI(){
+  ['log-list','swarm-list','a-banner','a-stats','a-list','r-body']
+    .forEach(function(id){ document.getElementById(id).innerHTML=''; });
+  ['log-empty','swarm-empty','a-empty','r-empty']
+    .forEach(function(id){ document.getElementById(id).style.display='block'; });
+  droneZone = {drone_1:null,drone_2:null}; zonePanels = {};
+  removeDot('drone_1'); removeDot('drone_2');
+  setBattery('drone_1',100); setBattery('drone_2',100);
+  setDroneUI('drone_1','dock','','DOCKED');
+  setDroneUI('drone_2','dock','','DOCKED');
+  document.querySelectorAll('.tab')[1].textContent = 'Swarm';
+  for(var i=0;i<ROWS;i++) for(var j=0;j<COLS;j++) clearZone('zone_'+i+'_'+j);
+}
+
+async function runMission(){
+  var input = document.getElementById('cmd-input').value.trim();
+  if(!input) return;
+  var btn = document.getElementById('run-btn');
+  btn.disabled=true; btn.textContent='Running...';
+  document.getElementById('status-text').textContent = 'EXECUTING...';
+  resetUI(); switchTab('log');
+  addLog('> '+input,'sys');
+  addLog('Sending to agentic system...','sys');
+  try{
+    var res = await fetch('/run',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({user_input:input})
+    });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    var data = await res.json();
+    addLog('--- mission data received. animating... ---','sys');
+
+    // Show supervisor notes in log
+    if(data.supervisor_notes){
+      addLog('[SUPERVISOR] '+data.supervisor_notes,'super');
+    }
+
+    await animate(
+      data.execution_log||[],
+      data.analysis||[],
+      data.swarm_messages||[],
+      data.supervisor_notes||''
+    );
+
+    var status = data.safety_status||'';
+    var score  = Math.round((data.mission_score||0)*100);
+    if(status==='aborted')      addLog('ABORTED \u2014 critical damage threshold exceeded','ferr');
+    else if(status==='escalated') addLog('ESCALATED \u2014 human review required','warn');
+    else addLog('Mission complete','fok');
+    addLog('Score: '+score+'%  Panels: '+(data.analysis||[]).length+'  Status: '+status.toUpperCase(),'sys');
+    document.getElementById('status-text').textContent = status.toUpperCase()+' | '+score+'%';
+
+    renderAnalysis(data); renderReport(data);
+
+    var sc = (data.swarm_messages||[]).length;
+    if(sc>0) document.querySelectorAll('.tab')[1].textContent = 'Swarm ('+(sc)+')';
+
+  } catch(err){
+    addLog('ERROR: '+err.message,'err');
+    document.getElementById('status-text').textContent = 'ERROR';
+  }
+  btn.disabled=false; btn.textContent='Execute';
+}
+
+document.getElementById('cmd-input').addEventListener('keydown',function(e){
+  if(e.key==='Enter') runMission();
+});
+buildFarm();
+</script>
+</body>
+</html>

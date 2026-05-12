@@ -1,0 +1,33 @@
+
+Solar Panel Inspection Guide
+
+Defect Types:
+
+1. Physical Damage
+Cracks, chips, or breaks in the panel surface. Indicated by high edge density
+in aerial imagery. Can reduce output by 5-25%. Requires immediate replacement if
+cracks cross busbars.
+
+2. Dust Accumulation
+Fine particles on panel surface reducing light absorption. Indicated by low
+brightness in captured images. Common in arid environments. Can reduce output
+by 5-15%. Resolved by cleaning.
+
+3. Snow Coverage
+Panel fully or partially covered by snow. Indicated by high white pixel ratio.
+Output drops to zero under full coverage. Usually self-resolving.
+
+4. Electrical Damage
+Hot spots, delamination, or internal cell failure. Indicated by high texture
+variance due to surface irregularities. Requires thermal imaging for confirmation.
+Often caused by bypass diode failure.
+
+5. Clean
+No visible defects. Panel operating normally. Brightness within normal range,
+no significant edge density anomalies.
+
+Inspection Protocol:
+- Capture minimum 3 images per zone
+- Flag zones with confidence < 0.6 for human review
+- Adjacent damaged zones indicate systemic risk
+- High edge density + low brightness = compound damage risk

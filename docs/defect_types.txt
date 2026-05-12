@@ -1,0 +1,13 @@
+
+Solar Panel Defect Reference
+
+Physical-Damage: Cracks, micro-cracks, broken cells. High edge density signal.
+Dusty: Soiling, bird droppings, dust. Low brightness signal.
+Snow-Covered: Snow accumulation. High white ratio signal.
+Electrical-Damage: Internal faults, hot spots, delamination. High texture variance.
+Clean: No defects. Normal brightness, low edge density.
+
+Risk Propagation:
+- Defects in one zone increase risk probability in adjacent zones by 15-30%
+- Electrical damage often presents in clusters due to shared inverter circuits
+- Physical damage clusters indicate installation quality issues or storm damage

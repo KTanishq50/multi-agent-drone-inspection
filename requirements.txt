@@ -1,0 +1,40 @@
+# requirements.txt
+
+# Core
+fastapi==0.111.0
+uvicorn==0.29.0
+pydantic==2.7.1
+
+# LangGraph + LangChain
+langgraph==0.1.9
+langchain==0.2.5
+langchain-community 
+langchain-text-splitters
+langchain-core>=0.2.19,<0.3
+langchain-groq==0.1.5
+langsmith==0.1.77
+
+
+
+
+
+# Vector store — Chroma (kept exactly as v1)
+chromadb==0.5.0
+
+# NOTE: sentence-transformers is removed.
+# Embedding is handled by SolarEmbeddingFunction in app/rag/ingest.py
+# which implements chromadb.EmbeddingFunction directly — no model download.
+
+# Graph
+networkx==3.3
+
+# Vision / image processing
+opencv-python-headless==4.9.0.80
+numpy==1.26.4
+Pillow==10.3.0
+
+# Utilities
+python-dotenv==1.0.1
+
+
+langchain_chroma
