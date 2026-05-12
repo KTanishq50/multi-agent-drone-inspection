@@ -53,7 +53,7 @@ def planner_agent(state):
                     "score": up["disagreement_score"]
                 })
 
-    # ── Panel-level risk scoring ──────────────────────────────────────────
+    #  Panel-level risk scoring 
     zone_risk_scores = []
 
     for zone in zones:
