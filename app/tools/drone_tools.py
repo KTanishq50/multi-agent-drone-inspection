@@ -4,7 +4,7 @@ import random
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data", "solar_farm")
 
-# ── SWARM MESSAGE BUS ─────────────────────────────────────────────────────────
+# SWARM MESSAGE BUS 
 # Shared in-process dict. Drones write messages here, executor reads them.
 # Format: { "drone_1": [ {type, zone, message}, ... ] }
 # This is the agent-to-agent communication layer.
@@ -32,7 +32,7 @@ def reset_swarm():
     _swarm_inbox["drone_2"] = []
 
 
-# ── DRONE ENV ─────────────────────────────────────────────────────────────────
+# DRONE ENV 
 
 BATTERY_PER_MOVE    = 8    # % per zone traversal
 BATTERY_PER_CAPTURE = 5    # % per image capture
