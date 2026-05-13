@@ -31,7 +31,8 @@ https://github.com/user-attachments/assets/4994c454-cf9e-4701-8b51-20c5c38db8aa
 
 # Screenshots
 
-> Add screenshots/gifs here
+<img width="1914" height="891" alt="Screenshot 2026-05-12 213537" src="https://github.com/user-attachments/assets/47c3be60-dad1-4285-b218-cfcbc90af5c3" />
+
 
 
 
