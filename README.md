@@ -21,7 +21,11 @@ The system was designed as an end-to-end agentic architecture rather than a sing
 # Demo Video
 
 
-https://github.com/user-attachments/assets/4994c454-cf9e-4701-8b51-20c5c38db8aa
+
+
+https://github.com/user-attachments/assets/b993eaf7-46fa-4b26-be5c-caf1e8d56fb5
+
+
 
 
 
